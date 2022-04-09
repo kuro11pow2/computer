@@ -1,6 +1,7 @@
 from abc import *
 from enum import Enum
 from queue import Queue
+from re import U
 
 
 class SimState(Enum):
@@ -21,10 +22,11 @@ class CircuitUnit(metaclass=ABCMeta):
     def __init__(self, id: int, connectionsTo: list[ConnectionInfo], ins: list[str], outs: list[str]) -> None:
         self.id = id
         self.connectionsTo = connectionsTo
-        self.setStateWait()
 
         self.ins = [None] * len(ins)
         self.outs = [None] * len(outs)
+        self.setStateWait()
+
         self.insName = ins
         self.outsName = outs
 
@@ -38,13 +40,14 @@ class CircuitUnit(metaclass=ABCMeta):
         self.state = SimState.EVAL
     
     def __repr__(self) -> str:
-        s = f"[{self.__class__.__name__}] {self.id=}, {self.connectionsTo=}  ("
+        s = f"[{self.__class__.__name__}] {self.id=}, {self.state=}\n\t* ("
         for i, (inp, name) in enumerate(zip(self.ins, self.insName)):
             s += f"{name}: None" if inp == None else f"{name}: {inp:0>4X}"
             s += (", " if i < len(self.ins) - 1 else ") -> (")
         for outp, name in zip(self.outs, self.outsName):
             s += f"{name}: None" if outp == None else f"{name}: {outp:0>4X}"
-            s += (", " if i < len(self.outs) - 1 else ")")
+            s += (", " if i < len(self.outs) - 1 else ")\n\t* ")
+        s += f"{self.connectionsTo=}"
         return s
 
     def eval(self) -> None:
@@ -64,7 +67,7 @@ class Adder(CircuitUnit):
         self.outs = [sum(self.ins)]
 
 
-def testAdder() -> bool:
+def testAdder():
     print()
     print("Test Adder")
     
@@ -82,11 +85,18 @@ def testAdder() -> bool:
 
     if adder.outs == [0xFF]:
         print(f"Adder test passed")
-        return True
     else:
         print(f"Adder test failed")
-        return False
 
+    adder.setStateEval()
+    adder.eval()
+    adder.setStateWait()
+    print(adder)
+
+    if adder.outs == [0xFF]:
+        print(f"Adder test passed")
+    else:
+        print(f"Adder test failed")
 
 testAdder()
 
@@ -116,14 +126,14 @@ class CircuitSim:
         self.queueLen -= 1
         return task
 
-    def eval(self) -> None:
+    def evalTask(self) -> None:
         count = self.queueLen
         
         if (count == 0):
             return
 
         self.timestepCount += 1
-        updatedUnits: set[CircuitUnit] = set()
+        self.updatedUnits: set[CircuitUnit] = set()
 
         for _ in range(count):
             task = self.popTask()
@@ -131,27 +141,29 @@ class CircuitSim:
             for connection in task.connectionsTo:
                 unit = self.units[connection.unitId]
                 unit.setInput(connection.entryIdx, task.inputVal)
-                updatedUnits.add(unit)
+                self.updatedUnits.add(unit)
                 self.taskCount += 1
-
-        print(self)
         
-        for unit in updatedUnits:
+        for unit in self.updatedUnits:
             unit.setStateEval()
+
+    def execUnit(self) -> None:
+
+        for unit in self.updatedUnits:
             unit.eval()
+
+            if (unit.connectionsTo != None):
+                for outVal in unit.outs:
+                    self.putTask(Task(unit.connectionsTo, outVal))
+
             unit.setStateWait()
-
-            if (unit.connectionsTo == None):
-                continue
-
-            for outVal in unit.outs:
-                self.putTask(Task(unit.connectionsTo, outVal))
 
     def __repr__(self) -> str:
         s = f"[{self.__class__.__name__}] "
-        s += f"{self.queueLen=}, {self.taskCount=}, {self.timestepCount=}\n"
-        for i, unit in enumerate(self.units.values()):
-            s += f"\t{unit}" + (f"\n" if i < len(self.units) - 1 else "")
+        s += f"{self.queueLen=}, {self.taskCount=}, {self.timestepCount=}"
+        for unit in self.units.values():
+            tmp = str(unit).replace("\t*", "\t\t*")
+            s += f"\n\t* {tmp}"
         return s
 
 
@@ -160,11 +172,13 @@ def testCircuitSim():
     print("Test CircuitSim")
 
     sim = CircuitSim()
+    print(sim)
 
     # make units
     sim.units[0] = Adder(0, [ConnectionInfo(2, 0)])
     sim.units[1] = Adder(1, [ConnectionInfo(2, 1)])
     sim.units[2] = Adder(2, None)
+    print(sim)
 
     # make inputs
     sim.putTask(Task([ConnectionInfo(0, 0)], 0x1))
@@ -173,10 +187,16 @@ def testCircuitSim():
     sim.putTask(Task([ConnectionInfo(1, 1)], 0x20))
     print(sim)
     
-    sim.eval()
+    sim.evalTask()
     print(sim)
 
-    sim.eval()
+    sim.execUnit()
+    print(sim)
+
+    sim.evalTask()
+    print(sim)
+
+    sim.execUnit()
     print(sim)
 
     lastUnit = sim.units[len(sim.units) - 1]
