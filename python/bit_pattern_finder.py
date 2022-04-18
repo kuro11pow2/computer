@@ -2,7 +2,7 @@ from finite_state_machine import State
 from enum import Enum
 
 
-class BitPatterFinderState(Enum):
+class BitPatternFinderState(Enum):
     A = 0
     B = 1
     C = 2
@@ -10,58 +10,45 @@ class BitPatterFinderState(Enum):
     E = 4
     
 
-class BitPatterFinderValue(Enum):
+class BitPatternFinderValue(Enum):
     zero = 0
     one = 1
 
 
-class BitPatterFinder(State):
+class BitPatternFinder(State):
     stateTransitionMatrix = [
-        [BitPatterFinderState.A, BitPatterFinderState.B],
-        [BitPatterFinderState.C, BitPatterFinderState.B],
-        [BitPatterFinderState.A, BitPatterFinderState.D],
-        [BitPatterFinderState.C, BitPatterFinderState.E],
-        [BitPatterFinderState.C, BitPatterFinderState.B],
+        [BitPatternFinderState.A, BitPatternFinderState.B],
+        [BitPatternFinderState.C, BitPatternFinderState.B],
+        [BitPatternFinderState.A, BitPatternFinderState.D],
+        [BitPatternFinderState.C, BitPatternFinderState.E],
+        [BitPatternFinderState.C, BitPatternFinderState.B],
     ]
     stateOutputs = [
-        BitPatterFinderValue.zero, 
-        BitPatterFinderValue.zero, 
-        BitPatterFinderValue.zero, 
-        BitPatterFinderValue.zero, 
-        BitPatterFinderValue.one]
+        BitPatternFinderValue.zero, 
+        BitPatternFinderValue.zero, 
+        BitPatternFinderValue.zero, 
+        BitPatternFinderValue.zero, 
+        BitPatternFinderValue.one]
 
-    def __init__(self, string):
-        super().__init__(BitPatterFinderState.A)
-        self.string = string
+    def __init__(self, inputs):
+        super().__init__(BitPatternFinderState.A)
+        self.inputs = list(map(lambda x : BitPatternFinderValue.zero if x == "0" else BitPatternFinderValue.one, inputs))
     
     def __repr__(self) -> str:
-        return f"{self.string}, {super().__repr__()}"
-    
-    def find(self):
-        output = ""
-        for c in self.string:
-            if c == '0':
-                self.set(BitPatterFinderValue.zero)
-            elif c == '1':
-                self.set(BitPatterFinderValue.one)
-            else:
-                raise Exception("Invalid character")
-
-            self.eval()
-            output += str(self.get().value)
-            print(self)
-
-
-        return output
+        return f"{self.inputs}, {super().__repr__()}"
         
 
 if __name__ == "__main__":
-    def testBitPatterFinder():
-        finder = BitPatterFinder("1011011")
+    def testBitPatternFinder():
+        inputs = "1011011"
+        finder = BitPatternFinder(inputs)
 
-        if finder.find() != "0001001":
-            raise Exception("Test failed")
+        expected = "0001001"
+        observed = finder.run()
+
+        if observed == expected:
+            print(f"Test passed: {inputs} -> {observed}, expected: {expected}")
         else:
-            print("Test passed")
+            raise Exception("Test failed")
 
-    testBitPatterFinder()
+    testBitPatternFinder()

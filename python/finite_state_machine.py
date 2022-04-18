@@ -24,5 +24,15 @@ class State(metaclass=ABCMeta):
         self.__state = self.stateTransitionMatrix[self.__state.value][self.__input.value]
         self.__output = self.stateOutputs[self.__state.value]
 
+    def run(self):
+        outputs = ""
+
+        for input in self.inputs:
+            self.set(input)
+            self.eval()
+            outputs += str(self.get().value)
+            
+        return outputs
+
     def get(self):
         return self.__output
