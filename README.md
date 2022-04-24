@@ -1,5 +1,11 @@
 # computer
 
+## PMOS NOR Gate
+![](images/2022-04-25-00-19-53.png)
+
+## NMOS NOR Gate
+![](images/2022-04-25-00-01-58.png)
+
 ## Chapter 01
 
 ### NAND Logic
